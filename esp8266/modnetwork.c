@@ -201,6 +201,32 @@ STATIC mp_obj_t esp_scan(mp_obj_t self_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(esp_scan_obj, esp_scan);
 
+// https://forum.micropython.org/viewtopic.php?t=3389
+
+STATIC mp_obj_t esp_freedom(mp_obj_t self_in, mp_obj_t chan_in, mp_obj_t buf_in) {
+    require_if(self_in, STATION_IF);
+    if ((wifi_get_opmode() & STATION_MODE) == 0) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
+            "STA must be active"));
+    }
+
+    int channel = mp_obj_get_int(chan_in);
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer_raise(buf_in, &bufinfo, MP_BUFFER_READ);
+
+    wifi_station_disconnect();
+    wifi_promiscuous_enable(1);
+    wifi_set_channel(channel);
+
+    wifi_send_pkt_freedom(bufinfo.buf, bufinfo.len, false);
+    wifi_send_pkt_freedom(bufinfo.buf, bufinfo.len, false);
+    wifi_send_pkt_freedom(bufinfo.buf, bufinfo.len, false);
+    wifi_promiscuous_enable(0);
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(esp_freedom_obj, esp_freedom);
+
 /// \method isconnected()
 /// Return True if connected to an AP and an IP address has been assigned,
 ///     false otherwise.
@@ -432,6 +458,7 @@ STATIC const mp_rom_map_elem_t wlan_if_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_isconnected), MP_ROM_PTR(&esp_isconnected_obj) },
     { MP_ROM_QSTR(MP_QSTR_config), MP_ROM_PTR(&esp_config_obj) },
     { MP_ROM_QSTR(MP_QSTR_ifconfig), MP_ROM_PTR(&esp_ifconfig_obj) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_freedom), (mp_obj_t)&esp_freedom_obj },
 };
 
 STATIC MP_DEFINE_CONST_DICT(wlan_if_locals_dict, wlan_if_locals_dict_table);
